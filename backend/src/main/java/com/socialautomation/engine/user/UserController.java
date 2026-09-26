@@ -38,6 +38,19 @@ public class UserController {
         );
     }
 
+    @GetMapping("/protected")
+    public String protectedEndpoint() {
+        return "JWT authentication successful";
+    }
+    @GetMapping("/me")
+public UserResponse getCurrentUser(
+        org.springframework.security.core.Authentication authentication) {
+
+    String email = authentication.getName();
+
+    return userService.getUserByEmail(email);
+}
+
     public record CreateUserRequest(
             @NotBlank
             @Email

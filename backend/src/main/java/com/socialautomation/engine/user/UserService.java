@@ -14,6 +14,7 @@ public class UserService {
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder) {
+
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -36,6 +37,7 @@ public class UserService {
     }
 
     public List<UserResponse> getAllUsers() {
+
         return userRepository.findAll()
                 .stream()
                 .map(user -> new UserResponse(
@@ -43,5 +45,17 @@ public class UserService {
                         user.getEmail()
                 ))
                 .toList();
+    }
+
+    public UserResponse getUserByEmail(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        return new UserResponse(
+                user.getId(),
+                user.getEmail()
+        );
     }
 }
