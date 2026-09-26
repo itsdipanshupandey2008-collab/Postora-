@@ -70,4 +70,28 @@ public class MediaService {
 
         return mediaRepository.findAllByUserId(user.getId());
     }
+
+    public MediaAsset getByIdForUser(Long mediaId, String userEmail) {
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return mediaRepository.findByIdAndUserId(mediaId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Media not found"));
+    }
+
+    public void deleteForUser(Long mediaId, String userEmail) throws IOException {
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        MediaAsset mediaAsset = mediaRepository.findByIdAndUserId(
+                mediaId,
+                user.getId()
+        ).orElseThrow(() -> new IllegalArgumentException("Media not found"));
+
+        mediaStorage.delete(mediaAsset.getStorageKey());
+
+        mediaRepository.delete(mediaAsset);
+    }
 }
