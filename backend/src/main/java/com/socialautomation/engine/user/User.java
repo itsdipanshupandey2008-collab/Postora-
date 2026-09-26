@@ -22,11 +22,15 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private String password;
+
     protected User() {
     }
 
-    public User(String email) {
+    public User(String email, String password) {
         this.email = email;
+        this.password = password;
     }
 
     public Long getId() {
@@ -35,5 +39,9 @@ public class User {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getPassword() {
+        return password;
     }
 }
