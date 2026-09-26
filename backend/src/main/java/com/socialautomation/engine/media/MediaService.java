@@ -1,8 +1,10 @@
 package com.socialautomation.engine.media;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,9 +14,12 @@ import com.socialautomation.engine.user.UserRepository;
 @Service
 public class MediaService {
 
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+
     private final MediaRepository mediaRepository;
     private final MediaStorage mediaStorage;
     private final UserRepository userRepository;
+    private final Tika tika;
 
     public MediaService(
             MediaRepository mediaRepository,
@@ -24,6 +29,7 @@ public class MediaService {
         this.mediaRepository = mediaRepository;
         this.mediaStorage = mediaStorage;
         this.userRepository = userRepository;
+        this.tika = new Tika();
     }
 
     public MediaAsset upload(MultipartFile file, String userEmail) throws IOException {
@@ -32,10 +38,18 @@ public class MediaService {
             throw new IllegalArgumentException("File cannot be empty");
         }
 
-        String contentType = file.getContentType();
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("File size cannot exceed 10 MB");
+        }
 
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("Only image files are allowed");
+        String detectedContentType;
+
+        try (InputStream inputStream = file.getInputStream()) {
+            detectedContentType = tika.detect(inputStream, file.getOriginalFilename());
+        }
+
+        if (!detectedContentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Only valid image files are allowed");
         }
 
         User user = userRepository.findByEmail(userEmail)
@@ -43,7 +57,7 @@ public class MediaService {
 
         String storageKey = mediaStorage.store(
                 file.getInputStream(),
-                contentType
+                detectedContentType
         );
 
         try {
@@ -51,7 +65,7 @@ public class MediaService {
                     user,
                     file.getOriginalFilename(),
                     storageKey,
-                    contentType,
+                    detectedContentType,
                     file.getSize()
             );
 
@@ -64,7 +78,6 @@ public class MediaService {
     }
 
     public List<MediaAsset> getAllForUser(String userEmail) {
-
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -72,7 +85,6 @@ public class MediaService {
     }
 
     public MediaAsset getByIdForUser(Long mediaId, String userEmail) {
-
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -81,7 +93,6 @@ public class MediaService {
     }
 
     public void deleteForUser(Long mediaId, String userEmail) throws IOException {
-
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -91,7 +102,6 @@ public class MediaService {
         ).orElseThrow(() -> new IllegalArgumentException("Media not found"));
 
         mediaStorage.delete(mediaAsset.getStorageKey());
-
         mediaRepository.delete(mediaAsset);
     }
 }
